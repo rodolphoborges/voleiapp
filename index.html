@@ -1,0 +1,104 @@
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+export default function VoleiApp() {
+  const [players, setPlayers] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [newPlayer, setNewPlayer] = useState("");
+  const [newSkill, setNewSkill] = useState(1);
+  const [score, setScore] = useState({ teamA: 0, teamB: 0 });
+  const [points, setPoints] = useState([]);
+  const maxPoints = 21;
+
+  const addPlayer = () => {
+    if (newPlayer.trim() !== "") {
+      setPlayers([...players, { name: newPlayer, skill: parseInt(newSkill) }]);
+      setNewPlayer("");
+      setNewSkill(1);
+    }
+  };
+
+  const shuffleTeams = () => {
+    let sortedPlayers = [...players].sort((a, b) => b.skill - a.skill);
+    let teamA = [], teamB = [];
+    
+    sortedPlayers.forEach((player, index) => {
+      if (index % 2 === 0) {
+        teamA.push(player);
+      } else {
+        teamB.push(player);
+      }
+    });
+    
+    setTeams([teamA, teamB]);
+    setScore({ teamA: 0, teamB: 0 });
+    setPoints([]);
+  };
+
+  const addPoint = (team, player) => {
+    if (score[team] < maxPoints) {
+      setScore(prevScore => ({ ...prevScore, [team]: prevScore[team] + 1 }));
+      setPoints([...points, { player, team }]);
+    }
+  };
+
+  const undoPoint = () => {
+    if (points.length > 0) {
+      const lastPoint = points.pop();
+      setPoints([...points]);
+      setScore(prevScore => ({ ...prevScore, [lastPoint.team]: prevScore[lastPoint.team] - 1 }));
+    }
+  };
+
+  const exportData = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(points, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "pontuacao.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    document.body.removeChild(downloadAnchor);
+  };
+
+  return (
+    <div className="p-4 text-center max-w-md mx-auto">
+      <h1 className="text-xl font-bold mb-4">Organizador de Jogos de Vôlei</h1>
+      <div className="mb-4">
+        <Input placeholder="Nome do Jogador" value={newPlayer} onChange={(e) => setNewPlayer(e.target.value)} />
+        <Input type="number" min="1" max="5" value={newSkill} onChange={(e) => setNewSkill(e.target.value)} />
+        <Button onClick={addPlayer} className="w-full mt-2">Adicionar Jogador</Button>
+      </div>
+      <Button onClick={shuffleTeams} className="w-full mb-4">Sortear Times</Button>
+      <div className="grid grid-cols-2 gap-4">
+        {teams.map((team, index) => (
+          <Card key={index}>
+            <CardContent>
+              <h2 className="font-semibold">Time {index + 1}</h2>
+              <ul>
+                {team.map((player, i) => (
+                  <li key={i}>{player.name} (Nível {player.skill}) <Button size="sm" onClick={() => addPoint(index === 0 ? 'teamA' : 'teamB', player.name)}>+</Button></li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="mt-4">
+        <h2 className="font-bold">Placar</h2>
+        <p className="text-lg font-semibold">Time 1: {score.teamA} - Time 2: {score.teamB}</p>
+      </div>
+      <Button onClick={undoPoint} className="mt-2 w-full">Desfazer Último Ponto</Button>
+      <Button onClick={exportData} className="mt-2 w-full">Exportar Dados</Button>
+      <div className="mt-4">
+        <h2 className="font-bold">Histórico de Pontos</h2>
+        <ul className="text-sm">
+          {points.map((p, i) => (
+            <li key={i}>{p.player} marcou para {p.team === 'teamA' ? 'Time 1' : 'Time 2'}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
